@@ -1,3 +1,4 @@
+import GHC.Exts.Heap (GenClosure(var))
 ------------------------- Auxiliary functions
 
 merge :: Ord a => [a] -> [a] -> [a]
@@ -168,15 +169,28 @@ run x = do
 ------------------------- Assignment 2: Combinators to Lambda-terms
 
 toLambda :: Combinator -> Term
-toLambda = undefined
+toLambda (c :@ d) = Apply (toLambda c) (toLambda d) 
+toLambda I = Lambda  "x" (Variable "x")
+toLambda K = Lambda "x" (Lambda "y" (Variable "x"))
+toLambda S = Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "x") (Variable "z")) (Apply (Variable "y") (Variable "z")))))
+toLambda (V x) = Variable x
+
 
 ------------------------- Assignment 3: Lambda-terms to Combinators
 
 abstract :: Var -> Combinator -> Combinator
-abstract = undefined
+abstract x (V c)
+  | x == c = I
+  | otherwise = K :@ V c
+abstract x I = K :@ I
+abstract x K = K :@ K
+abstract x S = K :@ S
+abstract x (c :@ d) = S :@ abstract x c :@ abstract x d
 
 toCombinator :: Term -> Combinator
-toCombinator = undefined
+toCombinator (Variable x) = V x
+toCombinator (Lambda x m) = abstract x (toCombinator m)
+toCombinator (Apply m n) = toCombinator m :@ toCombinator n
 
 ------------------------- Assignment 4: Estimating growth
 
