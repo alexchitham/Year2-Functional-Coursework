@@ -1,3 +1,4 @@
+import Distribution.PackageDescription (Condition(Var))
 ------------------------- Auxiliary functions
 
 merge :: Ord a => [a] -> [a] -> [a]
@@ -194,6 +195,25 @@ toCombinator (Variable x) = V x
 toCombinator (Lambda x m) = abstract x (toCombinator m)
 toCombinator (Apply m n) = toCombinator m :@ toCombinator n
 
+optimisedAbstract :: Var -> Combinator -> Combinator
+optimisedAbstract x c
+  | not (occurs x c) = K :@ c
+  | otherwise = abstractX x c
+    where 
+      occurs :: Var -> Combinator -> Bool
+      occurs x (V c) = c == x
+      occurs x (c :@ d) = occurs x c || occurs x d
+      occurs x c = False
+      
+      abstractX :: Var -> Combinator -> Combinator
+      abstractX x (V c)
+        | x == c = I
+        | otherwise = K :@ V c
+      abstractX x I = K :@ I
+      abstractX x K = K :@ K
+      abstractX x S = K :@ S
+      abstractX x (c :@ d) = S :@ optimisedAbstract x c :@ optimisedAbstract x d
+
 ------------------------- Assignment 4: Estimating growth
 
 sizeL :: Term -> Int
@@ -228,7 +248,9 @@ series n = lambdaPart n n
 data Complexity = Linear | Quadratic | Cubic | Exponential
 
 comb :: Term -> Combinator
-comb = undefined
+comb (Variable x) = V x
+comb (Lambda x m) = optimisedAbstract x (comb m)
+comb (Apply m n) = comb m :@ comb n
 
 claim :: Complexity
 claim = undefined
