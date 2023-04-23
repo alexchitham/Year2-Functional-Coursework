@@ -1,4 +1,3 @@
-import Distribution.PackageDescription (Condition(Var))
 ------------------------- Auxiliary functions
 
 merge :: Ord a => [a] -> [a] -> [a]
@@ -106,7 +105,7 @@ normalize m = do
 
 infixl 5 :@
 
-data Combinator = I | K | S | Combinator :@ Combinator | V String
+data Combinator = I | K | S | B | C | Q | R | X | Y | Z | Combinator :@ Combinator | V String
 
 example1 :: Combinator
 example1 = S :@ K :@ K :@ V "x"
@@ -122,6 +121,13 @@ instance Show Combinator where
       f _ I = "I"
       f _ K = "K"
       f _ S = "S"
+      f _ B = "B"
+      f _ C = "C"
+      f _ Q = "Q"
+      f _ R = "R"
+      f _ X = "X"
+      f _ Y = "Y"
+      f _ Z = "Z"
       f _ (V s) = s
       f i (c :@ d) = if i == 1 then "(" ++ s ++ ")" else s where s = f 0 c ++ " " ++ f 1 d
 
@@ -134,6 +140,13 @@ parse s = down [] s
     down cs ('I' : str) = up cs I str
     down cs ('K' : str) = up cs K str
     down cs ('S' : str) = up cs S str
+    down cs ('B' : str) = up cs I str
+    down cs ('C' : str) = up cs I str
+    down cs ('Q' : str) = up cs I str
+    down cs ('R' : str) = up cs I str
+    down cs ('X' : str) = up cs I str
+    down cs ('Y' : str) = up cs I str
+    down cs ('Z' : str) = up cs I str
     down cs (c : str) = up cs (V [c]) str
     up :: [Maybe Combinator] -> Combinator -> String -> Combinator
     up [] c [] = c
@@ -148,6 +161,13 @@ step (V _) = []
 step I = []
 step K = []
 step S = []
+step B = []
+step C = []
+step Q = []
+step R = []
+step X = []
+step Y = []
+step Z = []
 step (I :@ x) = x : [I :@ x' | x' <- step x]
 step (K :@ x :@ y) =
   x
@@ -158,6 +178,45 @@ step (S :@ x :@ y :@ z) =
     : [S :@ x' :@ y :@ z | x' <- step x]
     ++ [S :@ x :@ y' :@ z | y' <- step y]
     ++ [S :@ x :@ y :@ z' | z' <- step z]
+step (B :@ x :@ y :@ z) =
+  (x :@ (y :@ z))
+    : [B :@ x' :@ y :@ z | x' <- step x]
+    ++ [B :@ x :@ y' :@ z | y' <- step y]
+    ++ [B :@ x :@ y :@ z' | z' <- step z]
+step (C :@ x :@ y :@ z) =
+  ((x :@ z) :@ y)
+    : [C :@ x' :@ y :@ z | x' <- step x]
+    ++ [C :@ x :@ y' :@ z | y' <- step y]
+    ++ [C :@ x :@ y :@ z' | z' <- step z]
+step (Q :@ u :@ x :@ y) =
+  (u :@ x)
+    : [Q :@ u' :@ x :@ y | u' <- step u]
+    ++ [Q :@ u :@ x' :@ y | x' <- step x]
+    ++ [Q :@ u :@ y :@ y' | y' <- step y]
+step (R :@ u :@ v :@ x :@ y) =
+  (u :@ v :@ x)
+    : [R :@ u' :@ v :@ x :@ y | u' <- step u]
+    ++ [R :@ u :@ v' :@ x :@ y | v' <- step v]
+    ++ [R :@ u :@ v :@ x' :@ y | x' <- step x]
+    ++ [R :@ u :@ v :@ x :@ y' | y' <- step y]
+step (X :@ u :@ x :@ y :@ z) =
+  (u :@ x :@ (y :@ z))
+    : [X :@ u' :@ x :@ y :@ z | u' <- step u]
+    ++ [X :@ u :@ x' :@ y :@ z | x' <- step x]
+    ++ [X :@ u :@ y :@ y' :@ z | y' <- step y]
+    ++ [X :@ u :@ y :@ y :@ z' | z' <- step z]
+step (Y :@ u :@ x :@ y :@ z) =
+  (u :@ (x :@ z) :@ y)
+    : [Y :@ u' :@ x :@ y :@ z | u' <- step u]
+    ++ [Y :@ u :@ x' :@ y :@ z | x' <- step x]
+    ++ [Y :@ u :@ y :@ y' :@ z | y' <- step y]
+    ++ [Y :@ u :@ y :@ y :@ z' | z' <- step z]
+step (Z :@ u :@ x :@ y :@ z) =
+  (u :@ (x :@ z) :@ (y :@ z))
+    : [Z :@ u' :@ x :@ y :@ z | u' <- step u]
+    ++ [Z :@ u :@ x' :@ y :@ z | x' <- step x]
+    ++ [Z :@ u :@ y :@ y' :@ z | y' <- step y]
+    ++ [Z :@ u :@ y :@ y :@ z' | z' <- step z]
 step (x :@ y) =
   [x' :@ y | x' <- step x]
     ++ [x :@ y' | y' <- step y]
@@ -177,6 +236,13 @@ toLambda (c :@ d) = Apply (toLambda c) (toLambda d)
 toLambda I = Lambda "x" (Variable "x")
 toLambda K = Lambda "x" (Lambda "y" (Variable "x"))
 toLambda S = Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "x") (Variable "z")) (Apply (Variable "y") (Variable "z")))))
+toLambda B = Lambda "x" (Lambda "y" (Lambda "z" (Apply (Variable "x") (Apply (Variable "y") (Variable "z")))))
+toLambda C = Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "x") (Variable "z")) (Variable "y"))))
+toLambda Q = Lambda "u" (Lambda "x" (Lambda "y" (Apply (Variable "u") (Variable "x"))))
+toLambda R = Lambda "u" (Lambda "v" (Lambda "x" (Lambda "y" (Apply (Apply (Variable "u") (Variable "v")) (Variable "x")))))
+toLambda X = Lambda "u" (Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "u") (Variable "x")) (Apply (Variable "y") (Variable "z"))))))
+toLambda Y = Lambda "u" (Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "u") (Apply (Variable "x") (Variable "z"))) (Variable "y")))))
+toLambda Z = Lambda "u" (Lambda "x" (Lambda "y" (Lambda "z" (Apply (Apply (Variable "u") (Apply (Variable "x") (Variable "z"))) (Apply (Variable "y") (Variable "z"))))))
 toLambda (V x) = Variable x
 
 ------------------------- Assignment 3: Lambda-terms to Combinators
@@ -195,25 +261,6 @@ toCombinator (Variable x) = V x
 toCombinator (Lambda x m) = abstract x (toCombinator m)
 toCombinator (Apply m n) = toCombinator m :@ toCombinator n
 
-optimisedAbstract :: Var -> Combinator -> Combinator
-optimisedAbstract x c
-  | not (occurs x c) = K :@ c
-  | otherwise = abstractX x c
-    where 
-      occurs :: Var -> Combinator -> Bool
-      occurs x (V c) = c == x
-      occurs x (c :@ d) = occurs x c || occurs x d
-      occurs x c = False
-      
-      abstractX :: Var -> Combinator -> Combinator
-      abstractX x (V c)
-        | x == c = I
-        | otherwise = K :@ V c
-      abstractX x I = K :@ I
-      abstractX x K = K :@ K
-      abstractX x S = K :@ S
-      abstractX x (c :@ d) = S :@ optimisedAbstract x c :@ optimisedAbstract x d
-
 ------------------------- Assignment 4: Estimating growth
 
 sizeL :: Term -> Int
@@ -223,10 +270,8 @@ sizeL (Variable x) = 1
 
 sizeC :: Combinator -> Int
 sizeC (c :@ d) = 1 + sizeC c + sizeC d
-sizeC I = 1
-sizeC K = 1
-sizeC S = 1
 sizeC (V x) = 1
+sizeC c = 1
 
 series :: Int -> Term
 series n = lambdaPart n n
@@ -234,14 +279,13 @@ series n = lambdaPart n n
     lambdaPart :: Int -> Int -> Term
     lambdaPart p q
       | p == 0 = Lambda (variables !! p) (applyPart q)
-      | p >= 1 = Lambda (variables !! p) (lambdaPart (p-1) q)
+      | p >= 1 = Lambda (variables !! p) (lambdaPart (p - 1) q)
       | p < 0 = error "Must be at least 0"
 
-    applyPart :: Int -> Term 
-    applyPart n 
-      | n > 0 = Apply (applyPart (n-1)) (Variable (variables !! n))
+    applyPart :: Int -> Term
+    applyPart n
+      | n > 0 = Apply (applyPart (n - 1)) (Variable (variables !! n))
       | n == 0 = Variable (variables !! n)
-        
 
 ------------------------- Assignment 5: Optimised interpretation
 
@@ -249,8 +293,46 @@ data Complexity = Linear | Quadratic | Cubic | Exponential
 
 comb :: Term -> Combinator
 comb (Variable x) = V x
+-- comb (Lambda x (Lambda y m)) = newAbstract x y (comb m)
 comb (Lambda x m) = optimisedAbstract x (comb m)
 comb (Apply m n) = comb m :@ comb n
+
+optimisedAbstract :: Var -> Combinator -> Combinator
+optimisedAbstract x c
+  | not (occurs x c) = K :@ c
+  | otherwise = abstractX x c
+  where
+    abstractX :: Var -> Combinator -> Combinator
+    abstractX x (V c)
+      | x == c = I
+      | otherwise = K :@ V c
+    abstractX x (c :@ d :@ e)
+      | occurs x d && not (occurs x e) && not (varCheckComb c) = Y :@ c :@ optimisedAbstract x d :@ e
+      | occurs x e && not (occurs x d) && not (varCheckComb c) = X :@ c :@ d :@ optimisedAbstract x e
+      | occurs x d && occurs x e && not (varCheckComb c) = Z :@ c :@ optimisedAbstract x d :@ optimisedAbstract x e
+    --   | occurs x (c :@ d) && not (occurs x e) = C :@ optimisedAbstract x (c :@ d) :@ e
+    --   | occurs x d && not (occurs x c) = B :@ (c :@ d) :@ optimisedAbstract x e
+    --   | otherwise = S :@ optimisedAbstract x (c :@ d) :@ optimisedAbstract x e
+    abstractX x (c :@ d)
+      | occurs x c && not (occurs x d) = C :@ optimisedAbstract x c :@ d
+      | occurs x d && not (occurs x c) = B :@ c :@ optimisedAbstract x d
+      | otherwise = S :@ optimisedAbstract x c :@ optimisedAbstract x d
+    abstractX x c = K :@ c
+
+occurs :: Var -> Combinator -> Bool
+occurs x (V c) = c == x
+occurs x (c :@ d) = occurs x c || occurs x d
+occurs x c = False
+
+varCheckComb :: Combinator -> Bool
+varCheckComb (V c) = True
+varCheckComb c = False
+
+newAbstract :: Var -> Var -> Combinator -> Combinator
+newAbstract x y (c :@ d)
+  | occurs x c && not (occurs x d) = Y :@ optimisedAbstract x c :@ d
+  | occurs x d && not (occurs x c) = X :@ c :@ optimisedAbstract x d
+  | otherwise = Z :@ optimisedAbstract x c :@ optimisedAbstract x d
 
 claim :: Complexity
 claim = undefined
