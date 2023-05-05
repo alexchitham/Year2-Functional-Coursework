@@ -293,7 +293,6 @@ data Complexity = Linear | Quadratic | Cubic | Exponential
 
 comb :: Term -> Combinator
 comb (Variable x) = V x
--- comb (Lambda x (Lambda y m)) = newAbstract x y (comb m)
 comb (Lambda x m) = optimisedAbstract x (comb m)
 comb (Apply m n) = comb m :@ comb n
 
@@ -310,9 +309,6 @@ optimisedAbstract x c
       | occurs x d && not (occurs x e) && not (varCheckComb c) = Y :@ c :@ optimisedAbstract x d :@ e
       | occurs x e && not (occurs x d) && not (varCheckComb c) = X :@ c :@ d :@ optimisedAbstract x e
       | occurs x d && occurs x e && not (varCheckComb c) = Z :@ c :@ optimisedAbstract x d :@ optimisedAbstract x e
-    --   | occurs x (c :@ d) && not (occurs x e) = C :@ optimisedAbstract x (c :@ d) :@ e
-    --   | occurs x d && not (occurs x c) = B :@ (c :@ d) :@ optimisedAbstract x e
-    --   | otherwise = S :@ optimisedAbstract x (c :@ d) :@ optimisedAbstract x e
     abstractX x (c :@ d)
       | occurs x c && not (occurs x d) = C :@ optimisedAbstract x c :@ d
       | occurs x d && not (occurs x c) = B :@ c :@ optimisedAbstract x d
@@ -328,11 +324,5 @@ varCheckComb :: Combinator -> Bool
 varCheckComb (V c) = True
 varCheckComb c = False
 
-newAbstract :: Var -> Var -> Combinator -> Combinator
-newAbstract x y (c :@ d)
-  | occurs x c && not (occurs x d) = Y :@ optimisedAbstract x c :@ d
-  | occurs x d && not (occurs x c) = X :@ c :@ optimisedAbstract x d
-  | otherwise = Z :@ optimisedAbstract x c :@ optimisedAbstract x d
-
 claim :: Complexity
-claim = undefined
+claim = Cubic
