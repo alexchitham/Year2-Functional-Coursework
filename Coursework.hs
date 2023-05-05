@@ -306,9 +306,9 @@ optimisedAbstract x c
       | x == c = I
       | otherwise = K :@ V c
     abstractX x (c :@ d :@ e)
-      | occurs x d && not (occurs x e) && not (varCheckComb c) = Y :@ c :@ optimisedAbstract x d :@ e
-      | occurs x e && not (occurs x d) && not (varCheckComb c) = X :@ c :@ d :@ optimisedAbstract x e
-      | occurs x d && occurs x e && not (varCheckComb c) = Z :@ c :@ optimisedAbstract x d :@ optimisedAbstract x e
+      | occurs x d && not (occurs x e) && not (isVariable c) = Y :@ c :@ optimisedAbstract x d :@ e
+      | occurs x e && not (occurs x d) && not (isVariable c) = X :@ c :@ d :@ optimisedAbstract x e
+      | occurs x d && occurs x e && not (isVariable c) = Z :@ c :@ optimisedAbstract x d :@ optimisedAbstract x e
     abstractX x (c :@ d)
       | occurs x c && not (occurs x d) = C :@ optimisedAbstract x c :@ d
       | occurs x d && not (occurs x c) = B :@ c :@ optimisedAbstract x d
@@ -320,9 +320,9 @@ occurs x (V c) = c == x
 occurs x (c :@ d) = occurs x c || occurs x d
 occurs x c = False
 
-varCheckComb :: Combinator -> Bool
-varCheckComb (V c) = True
-varCheckComb c = False
+isVariable :: Combinator -> Bool
+isVariable (V c) = True
+isVariable c = False
 
 claim :: Complexity
 claim = Cubic
